@@ -3383,7 +3383,7 @@ plot(train$Case_Status , train$Ferritin , main = "Ferritin")
 plot(train$Case_Status , train$CRP , main = "CRP")
 plot(train$Case_Status , train$Oxygen , main = "Oxygen")
 
-names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 ## Cinsiyet (bağımsız)
 chisq.test(table(train$Case_Status , train$Sex))
 table(train$Case_Status , train$Sex)
@@ -3441,7 +3441,7 @@ modelBase <- multinom(Case_Status ~ . , data = train)
 #modelBase$decay
 
 ### Farklı Model Karşılaştırmaları
-names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 # Model 2 (Ferritinsiz)
 model2 <-  multinom(Case_Status ~  Age + CRP + Oxygen + Sex + Patient_Followup_Status + Contact + Pregnancy +Intensive_care + Intensive_care + Intubation + CT_Result + CT + Pneumonia + Process_Status  , data = train)
 
@@ -3464,23 +3464,23 @@ summary(model4)
 caret::varImp(modelBase)
 
 predModelBase_train <- predict(modelBase , train)
-predModelBase
+predModelBase_train
 
 predModel2_train <- predict(model2 , train)
-predModel2
+predModel2_train
 
 
 predModel3_train <- predict(model3 , train)
-predModel3
+predModel3_train
 
 predModel4_train <- predict(model4 , train)
-predModel4
+predModel4_train
 
 
-caret::confusionMatrix(predModelBase_train , train$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel2_train , train$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel3_train , train$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel4_train , train$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
+caret::confusionMatrix(predModelBase_train , train$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel2_train , train$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel3_train , train$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel4_train , train$Case_Status , mode = "prec_recall", positive="Bad")
 
 caret::varImp(modelBase)
 
@@ -3497,10 +3497,10 @@ predModel3
 predModel4 <- predict(model4 , test)
 predModel4
 
-caret::confusionMatrix(predModelBase , test$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel2 , test$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel3 , test$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
-caret::confusionMatrix(predModel4 , test$Vaka_Durumu , mode = "prec_recall", positive="Kötü")
+caret::confusionMatrix(predModelBase , test$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel2 , test$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel3 , test$Case_Status , mode = "prec_recall", positive="Bad")
+caret::confusionMatrix(predModel4 , test$Case_Status , mode = "prec_recall", positive="Bad")
 
 
 #Precision: Tahmin ettiklerinin ne kadarı doğru?
@@ -3558,7 +3558,7 @@ caret::confusionMatrix(predModel4OR , testOranlarEsit$Vaka_Durumu , mode = "prec
 ```{r}
 # Decay parametresi: çürüme anlamına gelir. lambda gibi modeldeki katsayılarla oynar. Multinomial reg. noral network üzerinden uygulanıyor, o yüzden decay kullanılır.
 
-modelTuning <- train( Vaka_Durumu ~  .  , 
+modelTuning <- train( Case_Status ~  .  , 
                       data = train,
                       method = "multinom",
                       trControl = trainControl(method = "cv" , number = 5)
@@ -3574,15 +3574,15 @@ modelTuning$finalModel
 
 plot(modelTuning)
 
-modelTuned <- multinom(Vaka_Durumu ~ . , 
+modelTuned <- multinom(Case_Status ~ . , 
                        data  = train ,
-                       decay = 0	
+                       decay = 0.0001	
                       )
 
 
 predModelTuned <- predict(modelTuned , test)
 
-caret::confusionMatrix(predModelTuned , test$Vaka_Durumu , mode = "prec_recall")
+caret::confusionMatrix(predModelTuned , test$Case_Status , mode = "prec_recall")
 
 
 # Model 2 için tuning
@@ -3604,7 +3604,7 @@ modelTuning2$bestTune
 
 #2. KNN
 ```{r}
-df<-Veri_normal_oksijenli
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -3625,16 +3625,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -3646,46 +3647,44 @@ length(indeks_son)
 
 ```
 
-
-
 ##Model
 ```{r}
-df$Vaka_Durumu <- ifelse(df$Vaka_Durumu=="Kötü",0,ifelse(df$Vaka_Durumu=="Orta",1,2))
-df$Cinsiyet <- ifelse(df$Cinsiyet=="Kadın",0,1)
-df$Hasta_Takip_Durumu <- ifelse(df$Hasta_Takip_Durumu=="Evde İzolasyon/Ayaktan",0,1)
-df$Temaslı_mi <- ifelse(df$Temaslı_mi=="Evet",0,1)
-df$Gebe_Mi <- ifelse(df$Gebe_Mi=="Evet",0,1)
-df$Yogun_Bakimda_Mi <- ifelse(df$Yogun_Bakimda_Mi=="Evet",0,1)
-df$Entübasyon_Var_mi <- ifelse(df$Entübasyon_Var_mi=="Evet",0,1)
-df$BT <- ifelse(df$BT=="VAR",0,1)
-df$Pnomoni <- ifelse(df$Pnomoni=="VAR",0,1)
+df$Case_Status <- ifelse(df$Case_Status=="Bad",0,ifelse(df$Case_Status=="Medium",1,2))
+df$Sex <- ifelse(df$Sex=="Female",0,1)
+df$Patient_Followup_Status <- ifelse(df$Patient_Followup_Status=="Home Isolation/Ambulatory",0,1)
+df$Contact <- ifelse(df$Contact=="Yes",0,1)
+df$Pregnancy <- ifelse(df$Pregnancy=="Yes",0,1)
+df$Intensive_care <- ifelse(df$Intensive_care=="Yes",0,1)
+df$Intubation <- ifelse(df$Intubation=="Yes",0,1)
+df$CT <- ifelse(df$CT=="Yes",0,1)
+df$Pneumonia <- ifelse(df$Pneumonia=="Yes",0,1)
 
 
 set.seed(123)
-train_indeks <- createDataPartition(df$Vaka_Durumu, p = 0.8, list = FALSE, times = 1)
+train_indeks <- createDataPartition(df$Case_Status, p = 0.8, list = FALSE, times = 1)
 
 train <- df[train_indeks,]
 test <- df[-train_indeks,]
 
-train_x <- train %>% dplyr::select(-Vaka_Durumu)
-train_y <- train$Vaka_Durumu
+train_x <- train %>% dplyr::select(-Case_Status)
+train_y <- train$Case_Status
 
-test_x <- test %>% dplyr::select(-Vaka_Durumu)
-test_y <- test$Vaka_Durumu
+test_x <- test %>% dplyr::select(-Case_Status)
+test_y <- test$Case_Status
 
-training <- data.frame(train_x, Vaka_Durumu = train_y)
+training <- data.frame(train_x, Case_Status = train_y)
 
 
 
 knn_train <- train
 knn_test <- test
 
-knn_train <- knn_train %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","BT_Sonucu", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle"))
-knn_test <- knn_test %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","BT_Sonucu", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle"))
+knn_train <- knn_train %>% dplyr::select(-c("Hospital","Notification_District","CT_Result", "Process_Status", "Province","District","Neighborhood"))
+knn_test <- knn_test %>% dplyr::select(-c("Hospital","Notification_District","CT_Result", "Process_Status", "Province","District","Neighborhood"))
 
 
-knn_train <- knn_train %>% dplyr:: select(-Vaka_Durumu)
-knn_test <- knn_test %>% dplyr:: select(-Vaka_Durumu)
+knn_train <- knn_train %>% dplyr:: select(-Case_Status)
+knn_test <- knn_test %>% dplyr:: select(-Case_Status)
 
 
 knn_fit <- knn(train = knn_train, test = knn_test, cl = train_y, k = 3)
@@ -3719,6 +3718,9 @@ knn_fit10 <- knn(train = knn_train, test = knn_test, cl = train_y, k = 10)
 1-class_err(test_y, knn_fit3)
 1-class_err(test_y, knn_fit5)
 1-class_err(test_y, knn_fit10)
+confusionMatrix(table(knn_fit3 ,test_y))
+confusionMatrix(table(knn_fit5 ,test_y))
+confusionMatrix(table(knn_fit10 ,test_y))
 
 ```
 
@@ -3730,7 +3732,7 @@ ctrl <- trainControl(method="repeatedcv",repeats = 3)
 
 #,classProbs=TRUE,summaryFunction = twoClassSummary)
 
-knn_tune<- train(Vaka_Durumu ~ ., 
+knn_tune<- train(Case_Status ~ ., 
                  data = training, 
                  method = "knn",
                  trControl = ctrl, 
@@ -3757,7 +3759,7 @@ knn_tune
 
 plot(knn_tune)
 
-knn_tuned <- knn(train = knn_train, test = knn_test, cl = train_y, k = 9)
+knn_tuned <- knn(train = knn_train, test = knn_test, cl = train_y, k = 11)
 
 1-class_err(test_y, knn_tuned)
 
@@ -3765,6 +3767,7 @@ knnPredict <- predict(knn_tune,test_x )
 levels(knnPredict)
 #Get the confusion matrix to see accuracy value and other parameter values
 confusionMatrix(table(knn_tuned ,test_y))
+caret::confusionMatrix(knn_tuned , test$Case_Status , mode = "prec_recall")
 ```
 
 
