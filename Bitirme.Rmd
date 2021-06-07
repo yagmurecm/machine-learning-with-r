@@ -888,8 +888,7 @@ df$`CT` <- factor(df$`CT` ,
 ```{r}
 names(df)
 
-modelData <- df %>% dplyr::select(Hospital , Sex , Patient_Followup_Status , Case_Status , Contact , Pregnancy , Notification_District , Intensive_care , Intubation , Age , CT_Result , CT , Pneumonia , Process_Status , Ferritin , CRP , Oxygen)
-
+modelData<-df %>% dplyr::select(-c("Hospital","Notification_District","Province","District","Neighborhood"))
 
 num_cols <- c("CRP" , "Ferritin", "Oxygen", "Age")
 
@@ -933,6 +932,10 @@ min(log(modelRidge1$lambda))
 ##modelRidge1$lambda#seçilen lambda değeri
 modelRidge1$dev.ratio#R2 gibi yorumlanabilir. Büyük olası daha iyidir. =(1/(dev/null.dev))
 
+
+defaultSummary(data.frame(obs = trainSet_y,pred = as.vector(predict(modelRidge1, as.matrix(trainSet_x)))))
+
+defaultSummary(data.frame(obs = testSet_y,pred = as.vector(predict(modelRidge1, as.matrix(testSet_x)))))
 ```
 
 ## Lambda Değeri İçin Cross Validation (Tuning)
@@ -958,7 +961,7 @@ modelRidgeCV
 ## Model Tahmin Performans Değerlendirmesi
 ```{r}
 #Bulunan lambda değeri ile model oluşturulur.
-fitGl <- glmnet(trainSet_x , trainSet_y  , alpha = 0 , lambda = 0.01122)
+fitGl <- glmnet(trainSet_x , trainSet_y  , alpha = 0 , lambda = 0.01)
 
 predictionsRidge <- predict(fitGl , testSet_x )
 defaultSummary(data.frame(obs = trainSet_y,pred = as.vector(predict(fitGl, as.matrix(trainSet_x)))))
@@ -979,7 +982,7 @@ minMaxAc
 
 #4. Lasso Regresyon (L1)
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1000,16 +1003,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1020,36 +1024,44 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ##Model
 ```{r}
-modelData<-df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","Mernis_il","Mernis_ilce","Mernis_mahalle"))
+
+modelData1<-df %>% dplyr::select(-c("Hospital","Notification_District","Province","District","Neighborhood"))
+
+num_cols <- c("CRP" , "Ferritin", "Oxygen", "Age")
+
+##Standartlaştırma İşlemi 
+pre_scaled <- preProcess(modelData1[, num_cols] , method = c("center" , "scale"))
+## Standartlaştırılmış veri seti
+modelData <- predict(pre_scaled , modelData1) 
 
 modelDataDummy <- model.matrix( ~ . , data  = modelData)
 
@@ -1082,8 +1094,8 @@ plot(fitGL , xvar = "lambda")
 
 ##Cross Validation (tuning)
 ```{r}
-nrow(trainDataX)
-fitGLCV <- cv.glmnet(trainDataX , trainDataY , alpha = 1 , lambda = lambdas , nfolds = 10 )
+#nrow(trainDataX)
+fitGLCV <- cv.glmnet(trainDataX , trainDataY , alpha = 1 , lambda = lambdas , nfolds = 10)
 plot(fitGLCV)
 
 best_lambda <- fitGLCV$lambda.min
@@ -1124,7 +1136,7 @@ defaultSummary(data.frame(obs = testDataY,pred = as.vector(predict(fitGlOLS, as.
 #5. Elastic Regresyon
 (Hem Ridge hem de Lassonun uygulandığı yöntem)
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1145,16 +1157,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1165,29 +1178,29 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
@@ -1195,8 +1208,15 @@ df$`BT` <- factor(df$`BT` ,
 ##Veri Seti
 ```{r}
 
-df<-df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","Mernis_il","Mernis_ilce","Mernis_mahalle"))
-modelData<-df
+modelData1<-df %>% dplyr::select(-c("Hospital","Notification_District","Province","District","Neighborhood"))
+
+num_cols <- c("CRP" , "Ferritin", "Oxygen", "Age")
+
+##Standartlaştırma İşlemi 
+pre_scaled <- preProcess(modelData1[, num_cols] , method = c("center" , "scale"))
+## Standartlaştırılmış veri seti
+modelData <- predict(pre_scaled , modelData1) 
+
 modelDataDummy <- model.matrix( ~ . , data  = modelData)
 
 trainDataX <- trainData[, -c(1,26)]
@@ -1210,6 +1230,7 @@ lambdas <- 10^seq(2,-2 , by = -0.01)
 fitGL <- glmnet(trainDataX , trainDataY , alpha = 1 , lambda = lambdas) 
 fitGL
 
+plot(fitGL , xvar = "lambda")
 
 ```
 
@@ -1269,7 +1290,7 @@ modelLookup(model = "glmnet")
 ```{r}
 fitElasCV$bestTune
 
-predictModel <- glmnet(trainDataX , trainDataY , alpha = 0.9157278, lambda = 0.01188862 )
+predictModel <- glmnet(trainDataX , trainDataY , alpha = 0.9625183 , lambda = 0.006940991 )
 
 predictions_1 <- predict(predictModel , testDataX )
 #predictions_1
@@ -1283,7 +1304,17 @@ caret::R2(predictions_1 , testDataY)
 caret::RMSE(predictions_1 , testDataY)
 caret::MAE(predictions_1 , testDataY)
 
+fitElasCVGrid$bestTune
 
+predictModel_grid <- glmnet(trainDataX , trainDataY , alpha = 1 , lambda = 0.1 )
+
+predictions_grid <- predict(predictModel_grid , testDataX )
+#predictions_1
+
+defaultSummary(data.frame(obs = trainDataY,pred = as.vector(predict(fitElasCVGrid, as.matrix(trainDataX)))))
+
+
+defaultSummary(data.frame(obs = testDataY,pred = as.vector(predict(fitElasCVGrid, as.matrix(testDataX)))))
 ## EKK karşılaştırması 
 
 #predictions_EKK <- predict(fitGlOLS , testDataX )
@@ -1296,7 +1327,7 @@ caret::MAE(predictions_1 , testDataY)
 
 #6. PCR
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1317,16 +1348,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1337,29 +1369,29 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
@@ -1367,7 +1399,9 @@ df$`BT` <- factor(df$`BT` ,
 
 ```{r}
 
-df<- df %>% dplyr::select(c("Cinsiyet","Hasta_Takip_Durumu","Vaka_Durumu","Temaslı_mi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","CRP","Pnomoni","Ferritin","Oksijen"))
+df<- df %>% dplyr::select(c("Sex","Pregnancy", "Patient_Followup_Status", "Case_Status", "Contact", "Intensive_care", "Intubation", "Age", "CT_Result", "CT","CRP","Pneumonia", "Ferritin", "Oxygen","Process_Status"))
+
+
 #train setin indeksini oluşturma
 set.seed(3456)
 train_indeks <- createDataPartition(df$CRP, 
@@ -1396,11 +1430,13 @@ training <- data.frame(train_x, CRP = train_y)
 
 ##model
 ```{r}
-pcr_fit <- pcr(CRP~ Cinsiyet+Hasta_Takip_Durumu+Vaka_Durumu+Temaslı_mi+Yogun_Bakimda_Mi+Entübasyon_Var_mi+Yas+BT_Sonucu+BT+Pnomoni+Ferritin+Oksijen, data = training,    scale = TRUE,    validation = "CV")
+
+pcr_fit <- pcr(CRP~  Sex + Pregnancy  +  Patient_Followup_Status  +  Case_Status  +  Contact  +  Intensive_care  +  Intubation  +  Age  +  CT_Result  +  CT  + Pneumonia  +  Ferritin  +  Oxygen     , data = training,    scale = TRUE,    validation = "CV")
 
 summary(pcr_fit)
 
 pcr_fit$model 
+
 # ya da
 #pcr_fit <- pcr(CRP~ Yas+ Ferritin + Oksijen, data = training,    scale = TRUE,    validation = "CV")
 
@@ -1426,8 +1462,7 @@ predict(pcr_fit, test_x[1:10,], ncomp = 1:2)
 ##test hatasının hesaplanması
 ```{r}
 defaultSummary(data.frame(obs = test_y,
-pred = as.vector(predict(pcr_fit, test_x, ncomp =1:3)))
-)
+pred = as.vector(predict(pcr_fit, test_x, ncomp =1:3))))
 ```
 ##Model Tunning
 
@@ -1446,18 +1481,18 @@ pcr_tune
 #ncomp:3 çıkıyor
 
 
-pcr_tune <- train(train_x, train_y,
+pcr_tune2 <- train(train_x, train_y,
                   method = "pcr",
                   trControl = ctrl,
                   tuneLength = 20,
                   preProc = c("center", "scale"))
 
-pcr_tune
+pcr_tune2
 #ncomp:9 çıkıyor
 
-plot(pcr_tune)
+plot(pcr_tune2)
 
-pcr_tune$finalModel
+pcr_tune2$finalModel
 
 ```
 
@@ -1465,11 +1500,11 @@ Model Test Hatasi
 ```{r}
 
 defaultSummary(data.frame(obs = train_y,
-pred = as.vector(predict(pcr_tune, train_x)))
+pred = as.vector(predict(pcr_tune2, train_x)))
 )
 
 defaultSummary(data.frame(obs = test_y,
-pred = as.vector(predict(pcr_tune, test_x)))
+pred = as.vector(predict(pcr_tune2, test_x)))
 )
 
 ```
@@ -1483,7 +1518,7 @@ pls kutuphanesi kismi en kucuk kareler regresyonu ve temel bilesen regresyonu ic
 
 pls kutuphanesi on tanimli olarak Dayal ve MacGregor'un 1994, kernel algoritmasini kullaniliyor. method argumani ile bu algoritma degistirilebilir. 
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1504,16 +1539,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1524,36 +1560,37 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ```{r}
 
-df<- df %>% dplyr::select(c("Cinsiyet","Hasta_Takip_Durumu","Vaka_Durumu","Temaslı_mi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","CRP","Pnomoni","Ferritin","Oksijen"))
+df<-df %>% dplyr::select(-c("Hospital","Notification_District","Province","District","Neighborhood"))
+
 #train setin indeksini oluşturma
 set.seed(3456)
 train_indeks <- createDataPartition(df$CRP, 
@@ -1576,11 +1613,13 @@ test_y <- test$CRP
 
 
 training <- data.frame(train_x, CRP = train_y)
+
 ```
 
 ## Model 
 
 ```{r}
+
 pls_fit <- plsr(CRP~., data  = training)
 
 summary(pls_fit)
@@ -1643,7 +1682,7 @@ pred = as.vector(predict(pls_tune, test_x)))
 
 #1. KNN
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1664,16 +1703,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1684,46 +1724,47 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ##veri seti
 ```{r}
-df <- df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","BT_Sonucu", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle"))
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District", "CT_Result", "Process_Status", "Province", "District", "Neighborhood"))
 
-df$Vaka_Durumu <- ifelse(df$Vaka_Durumu=="Kötü",0,ifelse(df$Vaka_Durumu=="Orta",1,2))
-df$Cinsiyet <- ifelse(df$Cinsiyet=="Kadın",0,1)
-df$Hasta_Takip_Durumu <- ifelse(df$Hasta_Takip_Durumu=="Evde İzolasyon/Ayaktan",0,1)
-df$Temaslı_mi <- ifelse(df$Temaslı_mi=="Evet",0,1)
-df$Gebe_Mi <- ifelse(df$Gebe_Mi=="Evet",0,1)
-df$Yogun_Bakimda_Mi <- ifelse(df$Yogun_Bakimda_Mi=="Evet",0,1)
-df$Entübasyon_Var_mi <- ifelse(df$Entübasyon_Var_mi=="Evet",0,1)
-df$BT <- ifelse(df$BT=="VAR",0,1)
-df$Pnomoni <- ifelse(df$Pnomoni=="VAR",0,1)
+df$Case_Status <- ifelse(df$Case_Status=="Bad",0,ifelse(df$Case_Status=="Medium",1,2))
+df$Sex <- ifelse(df$Sex=="Female",0,1)
+df$Patient_Followup_Status <- ifelse(df$Patient_Followup_Status=="Home Isolation/Ambulatory",0,1)
+df$Contact <- ifelse(df$Contact=="Yes",0,1)
+df$Pregnancy <- ifelse(df$Pregnancy=="Yes",0,1)
+df$Intensive_care <- ifelse(df$Intensive_care=="Yes",0,1)
+df$Intubation <- ifelse(df$Intubation=="Yes",0,1)
+df$CT <- ifelse(df$CT=="Yes",0,1)
+df$Pneumonia <- ifelse(df$Pneumonia=="Yes",0,1)
+
 
 rownames(df) <- c()
 
@@ -1811,7 +1852,8 @@ pred = predict(knn_tune, test_x)))
 ```
 #2. SVR (Support Vector Regression)
 ```{r}
-df<-Veri_normal_oksijenli2
+
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1832,16 +1874,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1852,36 +1895,49 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ## Model
 ```{r}
-df<- df%>% dplyr :: select(c("Yas", "CRP", "Ferritin", "Oksijen"))
+#df<- df%>% dplyr :: select(c("Yas", "CRP", "Ferritin", "Oksijen"))
+
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District", "CT_Result", "Process_Status", "Province", "District", "Neighborhood"))
+
+df$Case_Status <- ifelse(df$Case_Status=="Bad",0,ifelse(df$Case_Status=="Medium",1,2))
+df$Sex <- ifelse(df$Sex=="Female",0,1)
+df$Patient_Followup_Status <- ifelse(df$Patient_Followup_Status=="Home Isolation/Ambulatory",0,1)
+df$Contact <- ifelse(df$Contact=="Yes",0,1)
+df$Pregnancy <- ifelse(df$Pregnancy=="Yes",0,1)
+df$Intensive_care <- ifelse(df$Intensive_care=="Yes",0,1)
+df$Intubation <- ifelse(df$Intubation=="Yes",0,1)
+df$CT <- ifelse(df$CT=="Yes",0,1)
+df$Pneumonia <- ifelse(df$Pneumonia=="Yes",0,1)
+
 set.seed(3456)
 train_indeks <- createDataPartition(df$CRP, 
                                     p = 0.8, 
@@ -1936,13 +1992,16 @@ plot(svm_tune)
 
 svm_tune$finalModel
 
+defaultSummary(data.frame(obs = train_y,
+pred = predict(svm_tune, train_x)))
+
 defaultSummary(data.frame(obs = test_y,pred = predict(svm_tune, test_x)))
 #RMSE= 1.4152644  , R2= 0.1072534, MAE= 0.7667942 
 ```
 
 #3. CART
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -1963,16 +2022,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -1983,51 +2043,65 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ##Model
 ```{r}
-df <- df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","BT_Sonucu", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle"))
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District", "Process_Status", "Province", "District", "CT", "Neighborhood"))
 
-df$Vaka_Durumu <- ifelse(df$Vaka_Durumu=="Kötü",0,ifelse(df$Vaka_Durumu=="Orta",1,2))
-df$Cinsiyet <- ifelse(df$Cinsiyet=="Kadın",0,1)
-df$Hasta_Takip_Durumu <- ifelse(df$Hasta_Takip_Durumu=="Evde İzolasyon/Ayaktan",0,1)
-df$Temaslı_mi <- ifelse(df$Temaslı_mi=="Evet",0,1)
-df$Gebe_Mi <- ifelse(df$Gebe_Mi=="Evet",0,1)
-df$Yogun_Bakimda_Mi <- ifelse(df$Yogun_Bakimda_Mi=="Evet",0,1)
-df$Entübasyon_Var_mi <- ifelse(df$Entübasyon_Var_mi=="Evet",0,1)
-df$BT <- ifelse(df$BT=="VAR",0,1)
-df$Pnomoni <- ifelse(df$Pnomoni=="VAR",0,1)
+#df$Case_Status <- ifelse(df$Case_Status=="Bad",0,ifelse(df$Case_Status=="Medium",1,2))
+#df$Sex <- ifelse(df$Sex=="Female",0,1)
+#df$Patient_Followup_Status <- ifelse(df$Patient_Followup_Status=="Home Isolation/Ambulatory",0,1)
+#df$Contact <- ifelse(df$Contact=="Yes",0,1)
+#df$Pregnancy <- ifelse(df$Pregnancy=="Yes",0,1)
+#df$Intensive_care <- ifelse(df$Intensive_care=="Yes",0,1)
+#df$Intubation <- ifelse(df$Intubation=="Yes",0,1)
+#df$CT <- ifelse(df$CT=="Yes",0,1)
+#df$Pneumonia <- ifelse(df$Pneumonia=="Yes",0,1)
 
+set.seed(3456)
+train_indeks <- createDataPartition(df$CRP, 
+                                    p = 0.8, 
+                                    list = FALSE, 
+                                    times = 1)
 
-cart_tree <- rpart(CRP ~ ., data = df)
+train <- df[train_indeks, ]
+test <- df[-train_indeks, ]
+train_x <- train %>% dplyr::select(-CRP)
+train_y <- train$CRP
+test_x <- test %>% dplyr::select(-CRP)
+test_y <- test$CRP
 
-names(cart_tree)
+#tek bir veri seti 
+training <- data.frame(train_x, CRP = train_y)
+
+cart_tree <- rpart(CRP ~ ., data = train)
+
 
 #değişkenlerin önemlilik skorları
 cart_tree$variable.importance
@@ -2047,10 +2121,10 @@ plotcp(cart_tree)
 ##Eksenlerde Gosterim
 ```{r}
 
-df %>% mutate(y_sapka = predict(cart_tree)) %>%
+train %>% mutate(y_sapka = predict(cart_tree)) %>%
   ggplot() +
-  geom_point(aes(Oksijen, CRP)) +
-  geom_step(aes(Oksijen, y_sapka), col = "red")
+  geom_point(aes(Oxygen, CRP)) +
+  geom_step(aes(Oxygen, y_sapka), col = "red")
 
 
 ```
@@ -2059,26 +2133,29 @@ df %>% mutate(y_sapka = predict(cart_tree)) %>%
 ```{r}
 #minsplit ağacın dallanma sonucu oluşan en son yapraklarında olacak gözlem sayısı, cp=complexity
 #genellenebilirlik kaygısı olmadan mevcut yapıyı tanımlamak için en uygun fonk CART
-cart_tree <- rpart(CRP ~ ., data = df,
+cart_tree2 <- rpart(CRP ~ ., data = train,
                    control = rpart.control(cp = 0, 
                                            minsplit = 2))
 
 
-df %>% mutate(y_sapka = predict(cart_tree)) %>%
+train %>% mutate(y_sapka = predict(cart_tree2)) %>%
   ggplot() +
-  geom_point(aes(Oksijen, CRP)) +
-  geom_step(aes(Oksijen, y_sapka), col = "red")
+  geom_point(aes(Oxygen, CRP)) +
+  geom_step(aes(Oxygen, y_sapka), col = "red")
 
-cart_tree <- rpart(CRP ~ ., data = df,
+cart_tree2$variable.importance
+
+cart_tree3 <- rpart(CRP ~ ., data = train,
                    control = rpart.control(cp = 0.06, 
                                            minsplit = 3))
 
 
-df %>% mutate(y_sapka = predict(cart_tree)) %>%
+train %>% mutate(y_sapka = predict(cart_tree3)) %>%
   ggplot() +
-  geom_point(aes(Oksijen, CRP)) +
-  geom_step(aes(Oksijen, y_sapka), col = "red")
+  geom_point(aes(Oxygen, CRP)) +
+  geom_step(aes(Oxygen, y_sapka), col = "red")
 
+cart_tree3$variable.importance
 
 ```
 ##Agacin Budanmasi
@@ -2088,13 +2165,14 @@ df %>% mutate(y_sapka = predict(cart_tree)) %>%
 prune_cart <- prune(cart_tree, cp = 0.01)
 
 
-df %>% mutate(y_sapka = predict(prune_cart)) %>%
+train %>% mutate(y_sapka = predict(prune_cart)) %>%
   ggplot() +
-  geom_point(aes(Oksijen, CRP)) +
-  geom_step(aes(Oksijen, y_sapka), col = "red")
+  geom_point(aes(Oxygen, CRP)) +
+  geom_step(aes(Oxygen, y_sapka), col = "red")
 
-plot(prune_cart, margin = 0.1)
+plot(prune_cart, margin = 0.01)
 text(prune_cart, cex = 0.5)
+rpart.plot(prune_cart,cex = 0.8)
 
 ```
 
@@ -2103,7 +2181,9 @@ text(prune_cart, cex = 0.5)
 
 head(predict(prune_cart))
 
-defaultSummary(data.frame(obs = df$CRP, pred = predict(prune_cart)))
+defaultSummary(data.frame(obs = train_y, pred = predict(prune_cart, train_x)))
+
+defaultSummary(data.frame(obs = test_y, pred = predict(prune_cart, test_x)))
 
 ```
 
@@ -2134,24 +2214,29 @@ cart_tune$bestTune
 cart_tune$finalModel
 
 plot(cart_tune$finalModel)
-text(cart_tune$finalModel)
+text(cart_tune)
+rpart.plot(cart_tune$finalModel,cex = 0.8)
 
-plot(predict(cart_tune), df$CRP, xlab = "Tahmin",ylab = "Gercek")
+plot(predict(cart_tune), df$CRP, xlab = "Predict",ylab = "Real")
 abline(0,1)
 
 
 plot(as.party(cart_tree))
 
 
-defaultSummary(data.frame(obs = df$CRP,
-pred = predict(cart_tune)))
+defaultSummary(data.frame(obs = train_y, pred = predict(cart_tune, train_x)))
+
+#defaultSummary(data.frame(obs = df$CRP,pred = predict(cart_tune)))
+
+defaultSummary(data.frame(obs = test_y, pred = predict(cart_tune, test_x)))
+
 
 ```
 
 
 #4. Bagged Trees
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -2172,16 +2257,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -2192,29 +2278,29 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
@@ -2222,7 +2308,7 @@ df$`BT` <- factor(df$`BT` ,
 ## Model
 
 ```{r}
-df<-df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","Mernis_il","Mernis_ilce","Mernis_mahalle"))
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District",  "Province", "District", "Neighborhood"))
 
 set.seed(3456)
 train_indeks <- createDataPartition(df$CRP, 
