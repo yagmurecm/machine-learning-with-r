@@ -1435,8 +1435,8 @@ pcr_fit <- pcr(CRP~  Sex + Pregnancy  +  Patient_Followup_Status  +  Case_Status
 
 summary(pcr_fit)
 
-pcr_fit$model 
-
+pcr_fit$method
+?pcr
 # ya da
 #pcr_fit <- pcr(CRP~ Yas+ Ferritin + Oksijen, data = training,    scale = TRUE,    validation = "CV")
 
@@ -2333,42 +2333,61 @@ training <- data.frame(train_x, CRP = train_y)
 #bagging reg kurmanın 3 tane farklı yolu vardır
 
 #birinci yöntem
-bag_fit <- ipredbagg(train_y, train_x)
-bag_fit
+bag_fit1 <- ipredbagg(train_y, train_x)
+bag_fit1
+
+
+defaultSummary(data.frame(obs = train_y,
+pred = predict(bag_fit1, train_x)))
+
+defaultSummary(data.frame(obs = test_y,
+pred = predict(bag_fit1, test_x)))
+
+
 
 #ikinci yöntem
-bag_fit <- bagging(CRP~ ., data = training)
+bag_fit2 <- bagging(CRP~ ., data = training)
+
+#bag_fit2
+
+
+defaultSummary(data.frame(obs = train_y,
+pred = predict(bag_fit2, train_x)))
+
+defaultSummary(data.frame(obs = test_y,
+pred = predict(bag_fit2, test_x)))
+
 
 #üçüncü yöntem
-bag_fit <- randomForest(training$CRP ~ . , data = training,
+bag_fit3 <- randomForest(training$CRP ~ . , data = training,
              mtry = ncol(training) - 1,
              importance = TRUE,
-             ntrees = 500
+             ntrees = 2000
              )
 
-bag_fit
+bag_fit3
 summary(training$CRP)
 
 #değişkenlerin önem düzeyleri
-importance(bag_fit)
-varImpPlot(bag_fit)
+importance(bag_fit3)
+varImpPlot(bag_fit3)
 ```
 
 ## Tahmin train test hatası
 ```{r}
 
-predict(bag_fit, test_x)
+predict(bag_fit3, test_x)
 
 defaultSummary(data.frame(obs = train_y,
-pred = predict(bag_fit, train_x)))
+pred = predict(bag_fit3, train_x)))
 
 defaultSummary(data.frame(obs = test_y,
-pred = predict(bag_fit, test_x)))
+pred = predict(bag_fit3, test_x)))
 
 
-plot(bag_fit, col = "dodgerblue", 
+plot(bag_fit3, col = "dodgerblue", 
      lwd = 2, 
-     main = "Bagged Trees: Hata ve Agac Sayisi Karsilastirimasi")
+     main = "Bagged Trees: Comparison of Error and Number of Tree")
 grid()
 
 
@@ -2383,7 +2402,6 @@ ctrl <- trainControl(method = "cv", number = 10)
 
 mtry <- ncol(train_x)
 tune_grid <- expand.grid(mtry = mtry)
-
 
 
 bag_tune <- train(train_x, train_y, 
@@ -2405,7 +2423,7 @@ pred = predict(bag_tune, test_x)))
 
 #5. Random Forest
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -2426,16 +2444,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -2446,36 +2465,37 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
 
 ##model 
 ```{r}
-df<-df %>% dplyr::select(-c("Hastane_Adi","Bildirim_İlcesi","Mernis_il","Mernis_ilce","Mernis_mahalle"))
+
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District",  "Province", "District", "Neighborhood"))
 
 set.seed(3456)
 train_indeks <- createDataPartition(df$CRP, 
@@ -2517,7 +2537,8 @@ plot(predict(rf_fit, test_x), test_y,
 grid()
 abline(0, 1, col = "darkorange", lwd = 2) 
 
-
+defaultSummary(data.frame(obs = train_y,
+pred = predict(rf_fit, train_x)))
 #test hatası
 defaultSummary(data.frame(obs = test_y,
 pred = predict(rf_fit, test_x)))
@@ -2619,11 +2640,21 @@ for (ntree in c(100, 200, 300, 500, 1000, 2000)) {
 sonuclar <- resamples(model_listesi)
 summary(sonuclar)
 
+rf_tuned <- randomForest(train_x, train_y,mtry=3,ntree=300,importance = TRUE)
+
+
+
+defaultSummary(data.frame(obs = train_y, 
+                            pred = predict(rf_tuned, train_x)))
+
+
+defaultSummary(data.frame(obs = test_y, 
+                            pred = predict(rf_tuned, test_x)))
 ```
 
 #6. GBM
 ```{r}
-df<-Veri_normal_oksijenli2
+df<-Veri_normal_oksijenli4
 df$`Hastane Adı`<-as.factor(df$`Hastane Adı`)
 df$`Cinsiyet`<-as.factor(df$`Cinsiyet`)
 df$`Vaka Kaynağı`<-as.factor(df$`Vaka Kaynağı`)
@@ -2644,16 +2675,17 @@ df$`Mernis Mahalle`<-as.factor(df$`Mernis Mahalle`)
 
 df<-df %>% dplyr :: select(-c("Vaka Kaynağı"))
 
-names(df) <- c("Hastane_Adi","Cinsiyet","Hasta_Takip_Durumu", "Vaka_Durumu","Temaslı_mi","Gebe_Mi","Bildirim_İlcesi","Yogun_Bakimda_Mi","Entübasyon_Var_mi","Yas","BT_Sonucu","BT","Pnomoni", "Sürec_Durumu", "Mernis_il","Mernis_ilce","Mernis_mahalle","Ferritin","CRP","Oksijen")
+names(df) <- c("Hospital","Sex","Patient_Followup_Status", "Case_Status","Contact","Pregnancy","Notification_District","Intensive_care","Intubation","Age","CT_Result","CT","Pneumonia", "Process_Status", "Province","District","Neighborhood","Ferritin","CRP","Oxygen")
+
 #Eksik Gebelik Verilerinin Doldurulması
-indeks_eksikgebelik <- which(is.na(df$`Gebe_Mi`))
-df$`Gebe_Mi`[indeks_eksikgebelik] <- "Hayır"
+indeks_eksikgebelik <- which(is.na(df$`Pregnancy`))
+df$`Pregnancy`[indeks_eksikgebelik] <- "No"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
 #Eksik BT Sonuçlarının Doldurulması
-indeks_eksikbtsonuc <- which(is.na(df$`BT_Sonucu`))
-df$`BT_Sonucu`[indeks_eksikbtsonuc] <- "Normal"
+indeks_eksikbtsonuc <- which(is.na(df$`CT_Result`))
+df$`CT_Result`[indeks_eksikbtsonuc] <- "Normal"
 
 indeks_eksikveri <- which(is.na(df))
 length(indeks_eksikveri)
@@ -2664,29 +2696,29 @@ indeks_son <- which(is.na(df))
 length(indeks_son)
 
 
-df$`Hasta_Takip_Durumu` <- factor(df$`Hasta_Takip_Durumu` , 
-                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
-                                ordered = T
-                                )
+#df$`Patient_Followup_Status` <- factor(df$`Patient_Followup_Status` , 
+#                                levels = c("Hastanede" , "Evde İzolasyon/Ayaktan"),
+#                                ordered = T
+#                                )
 
-df$`Vaka_Durumu` <- factor(df$`Vaka_Durumu` , 
-                                levels = c("Kötü","Orta","İyi"),
+df$`Case_Status` <- factor(df$`Case_Status` , 
+                                levels = c("Bad","Medium","Good"),
                                 ordered = T
                                 )
-df$`Gebe_Mi` <- factor(df$`Gebe_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Pregnancy` <- factor(df$`Pregnancy` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`Yogun_Bakimda_Mi` <- factor(df$`Yogun_Bakimda_Mi` , 
-                                levels = c("Evet" , "Hayır"),
+df$`Intensive_care` <- factor(df$`Intensive_care` , 
+                                levels = c("Yes" , "No"),
                                 ordered =T
                                 )
-df$`Pnomoni` <- factor(df$`Pnomoni` , 
-                                levels = c("VAR" , "YOK"),
+df$`Pneumonia` <- factor(df$`Pneumonia` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
-df$`BT` <- factor(df$`BT` , 
-                                levels = c("VAR" , "YOK"),
+df$`CT` <- factor(df$`CT` , 
+                                levels = c("Yes" , "No"),
                                 ordered = T
                                 )
 ```
@@ -2695,6 +2727,7 @@ df$`BT` <- factor(df$`BT` ,
 ```{r}
 
 
+df <- df %>% dplyr::select(-c("Hospital", "Notification_District",  "Province", "District", "Neighborhood"))
 gbm_fit <- gbm(CRP ~ ., data = training ,
     distribution = "gaussian", 
     n.trees = 5000, #ağaç sayısı
@@ -2704,11 +2737,11 @@ gbm_fit <- gbm(CRP ~ ., data = training ,
 
 summary(gbm_fit) #değişkenlerin önem düzeyleri ve görselleri
 
-names(gbm_fit)
+#names(gbm_fit)
 
 gbm.perf(gbm_fit, method = "cv") #İterasyon(ağaç) sayısı arttıkça hata durumu görseli
 
-
+?gbm
 
 ```
 ##Train hata
@@ -2756,11 +2789,11 @@ ctrl <- trainControl(method = "cv", 10,
 
 gbm_grid <- expand.grid(
             interaction.depth = seq(1, 7, by = 2),
-            n.trees = seq(100, 1000, by = 50),
+            n.trees = seq(0, 6000, by = 500),
             shrinkage = c(0.01, 0.1),
             n.minobsinnode = c(10:20))
 
-
+#seq(1000, 6000, by = 200)
 gbm_tune_fit <- train(train_x, train_y, 
       method = "gbm",
       trControl = ctrl,
@@ -2768,7 +2801,7 @@ gbm_tune_fit <- train(train_x, train_y,
       verbose = FALSE
       )
 
-
+?gbm
 plot(gbm_tune_fit)
 gbm_tune_fit$finalModel
 
@@ -2778,6 +2811,8 @@ gbm_tune_fit$results %>%
          shrinkage == as.numeric(gbm_tune_fit$bestTune$shrinkage) &
         n.minobsinnode == as.numeric(gbm_tune_fit$bestTune$n.minobsinnode))
 
+defaultSummary(data.frame(obs = train_y, 
+                            pred = predict(gbm_tune_fit, train_x)))
 
 defaultSummary(data.frame(obs = test_y, 
                             pred = predict(gbm_tune_fit, test_x)))
@@ -4201,6 +4236,8 @@ length(indeks_son)
 ```{r}
 
 df<- df %>% dplyr::select(-c("Hospital","Notification_District","Province","District","Neighborhood"))
+
+ncol(df)
 set.seed(123)
 train_indeks <- createDataPartition(df$Case_Status, 
                                   p = .8, 
@@ -4234,7 +4271,7 @@ importance(rf_fit)
 
 varImpPlot(rf_fit)
 
-
+?randomForest
 ```
 
 
@@ -4425,9 +4462,10 @@ ctrl <- trainControl(method="cv", number=10)
 
 gbm_grid <- expand.grid(
   interaction.depth = seq(1, 7, by = 2),#derinlik para.
-   n.trees = 200,#ağaç sayısı
+   n.trees = seq(100, 4000, by = 500),#ağaç sayısı
     shrinkage = c(0.01, 0.1),#daraltma adım boyu, öğrenme katsayısı
     n.minobsinnode = c(1:10))#bırakılacak gözlem sayısı
+
 
 gbm_grid <- data.frame(n.trees=2000, 
                        shrinkage=0.01, 
@@ -4442,7 +4480,6 @@ gbm_tune <- train(
   verbose = F,
   tuneGrid = gbm_grid
 )
-
 getTrainPerf(gbm_tune)
 
 
@@ -4742,3 +4779,83 @@ y_pred <- as.vector(predict(classifier, newdata = test_x))
 cm <- table(test_y, y_pred)
 
 ```
+
+```{r}
+##test-train
+
+
+set.seed(123)
+train_indeks <- createDataPartition(df$Case_Status, 
+                                  p = .8, 
+                                  list = FALSE, 
+                                  times = 1)
+
+
+train <- df[train_indeks,]
+test  <- df[-train_indeks,]
+
+
+train_x <- train %>% dplyr::select(-Case_Status)
+train_y <- train$Case_Status
+test_x <- test %>% dplyr::select(-Case_Status)
+test_y <- test$Case_Status
+
+
+classifier1 = svm(formula = Case_Status ~ ., data=train, type='C-classification', kernel='linear')
+y_pred1 <- as.vector(predict(classifier1, newdata = test_x))
+cm1 <- table(test_y, y_pred1)
+
+classifier2 = svm(formula = Case_Status ~ ., data=train, type='C-classification', kernel='radial')
+y_pred2 <- as.vector(predict(classifier2, newdata = test_x))
+cm2 <- table(test_y, y_pred2)
+
+cm1
+cm2
+
+cfm1 <- tidy(cm1)
+cfm2 <- tidy(cm2)
+
+defaultSummary(data.frame(obs = test_y, 
+                          pred = predict(classifier1, test_x)))
+
+
+##cm tabloları
+
+{r}
+install.packages("cvms")
+library(cvms)
+library(broom)    # tidy()
+library(tibble)   # tibble()
+
+set.seed(1)
+
+plot_confusion_matrix(cfm1, 
+                      target_col = "test_y", 
+                      prediction_col = "y_pred1",
+                      counts_col = "n")
+
+
+set.seed(1)
+
+plot_confusion_matrix(cfm2, 
+                      target_col = "test_y", 
+                      prediction_col = "y_pred2",
+                      counts_col = "n")
+
+y_pred <- as.vector(predict(classifier, newdata = test_x))
+
+
+cm <- table(test_y, y_pred)
+
+
+confusionMatrix(predict(classifier1, train_x), train_y, positive = "0")
+
+confusionMatrix(predict(classifier1, test_x), test_y, positive = "0")
+
+
+confusionMatrix(predict(classifier2, train_x), train_y, positive = "0")
+
+confusionMatrix(predict(classifier2, test_x), test_y, positive = "0")
+
+```
+
